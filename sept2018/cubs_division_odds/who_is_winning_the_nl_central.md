@@ -16,20 +16,32 @@ The dynamic right now is quite interesting. As of today, September 26, 2018, the
 
 The Cubbies have 5 games left to play and the Brewers have only 4. The team with the most wins will win the division. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers will steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers.
 
-To approach this problem, I built a simple data model based upon a mathematical function called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). Binomial distributions are useful in estimating the probability of binary event outcomes, like "Heads" or "Tails" of a coin flip. In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, we can measure the likelihood of any number of Wins using these 2 parameters for a given team.
+To approach this problem, I used a data model called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, this counting machine can measure the probability of any number of wins for a team using these 2 parameters/assumptions.
 
-We'll build a data model for each the Cubs and the Brewers probability of winning **X** more games, using their respective winning percentages as parameter **p**, and their respective **n** number of games left.
+We'll apply this data model for each the Cubs and the Brewers probability of winning **X** more games and make some inference from the outputs.
 
 Analytical Approach
 -------------------
 
-To solve this analytically, we apply a little math magic . . .
+To solve this analytically, we apply a little math magic to count the ways in which each team's remaining season can play out in terms of wins. . .
 
-1.  Calculate the probability of winning **X** games with **n** left to play, given **p**, the team's winning percentage. We use a function called `dbinom()` in the statistical programming language, `R`, to do this easily.
+1.  I will use a function called `dbinom()` in the statistical programming language, `R`, to calculate the probability of winning **X** games with **n** left to play, given **p**, the team's winning percentage.
 
-2.  Use matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make.
+``` r
+brewers_wins <- dbinom(c(0,1,2,3,4), # plausible outcomes for Brewers wins
+                       size = 4, # total games left
+                       p =0.576) # probability of winning a game = current win %
 
-3.  Sum all the joint probabilities where the Brewers won the same number of games or more than the Cubs. This is the final probability answer to our question.
+cubs_wins <- dbinom(c(0,1,2,3,4,5),
+                    size = 5, 
+                    p =0.58)
+```
+
+1.  Then apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. The plot below visualizes the joint probability distribution.
+
+![](who_is_winning_the_nl_central_files/figure-markdown_github/unnamed-chunk-3-1.png)
+
+1.  Sum all the joint probabilities where the Brewers won the same number of games or more than the Cubs. This is the final probability answer to our question. If we sum all the tiles with marks on them, the probability of the Brewers tying or winning the NL Central division as of 9/26/18 are **0.47**.
 
 Simulation Approach
 -------------------

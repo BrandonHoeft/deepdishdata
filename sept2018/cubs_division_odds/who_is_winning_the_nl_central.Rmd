@@ -12,6 +12,10 @@ output:
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = "",
                       fig.height = 6, fig.width = 6)
 options(scipen=999) # turn of scientific notation.
+
+library(dplyr)
+library(reshape2)
+library(ggplot2)
 ```
 
 It is the end of the 2018 regular season in MLB. The Chicago Cubs are on everybody's mind at my office, and of course it's hard for me to sympathize as a long-time Milwaukee Brewers fan. 
@@ -33,17 +37,53 @@ We'll apply this data model for each the Cubs and the Brewers probability of win
 To solve this analytically, we apply a little math magic to count the ways in which each team's remaining season can play out in terms of wins. . . 
 
 1. I will use a function called `dbinom()` in the statistical programming language, `R`, to calculate the probability of winning **X** games with **n** left to play, given **p**, the team's winning percentage.
-  
-2. Then apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. 
-  
-3. Sum all the joint probabilities where the Brewers won the same number of games or more than the Cubs. This is the final probability answer to our question.
 
+``` {r echo=TRUE}
+brewers_wins <- dbinom(c(0,1,2,3,4), # plausible outcomes for Brewers wins
+                       size = 4, # total games left
+                       p =0.576) # probability of winning a game = current win %
 
-``` {r}
-
+cubs_wins <- dbinom(c(0,1,2,3,4,5),
+                    size = 5, 
+                    p =0.58)
 ```
 
+  
+2. Then apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. The plot below visualizes the joint probability distribution. 
+
+``` {r}
+brewers_wins_x <- matrix(brewers_wins,
+                         dimnames = list(paste0("MIL_", c(0:4), "_Win"),"Brewers"))
+
+cubs_wins_x <- matrix(cubs_wins, ncol=length(cubs_wins),
+                      dimnames = list("Cubs", paste0("CHC_", c(0:5), "_Win")))
+ 
+joint_x <- brewers_wins_x %*% cubs_wins_x
+
+melt(joint_x) %>%
+    rename(brewers = Var1, cubs = Var2, joint_prob = value) %>%
+    mutate(brewers = stringr::str_extract(brewers, "[[:digit:]]+"),
+           cubs = stringr::str_extract(cubs, "[[:digit:]]+"),
+           text = ifelse(as.integer(brewers) >= as.integer(cubs), "*", "")) %>%
+    ggplot(aes(x=cubs, y=brewers, fill=joint_prob)) + 
+        geom_tile(color = "white") + 
+        geom_text(aes(label=text)) +
+        scale_fill_gradient2(low = "blue", high = "red", 
+           midpoint = 0.065, limit = c(0,0.13), space = "Lab", 
+           name="Joint\nProbability") +
+        labs(title = "Joint Probability of Cubs and Brewers Remaining Wins",
+             subtitle = "marks indicate joint outcomes favorable to Milwaukee",
+             x= "Plausible # of Cubs Wins",
+             y= "Plausible # of Brewers Wins") +
+        theme_minimal()
+    
+```
+  
+3. Sum all the joint probabilities where the Brewers won the same number of games or more than the Cubs. This is the final probability answer to our question. If we sum all the tiles with marks on them, the probability of the Brewers tying or winning the NL Central division as of 9/26/18 are **`r round(sum(joint_x[lower.tri(joint_x, diag=TRUE)]),2)`**.
+
+
 ## Simulation Approach 
+
 
 ```{r}
 
