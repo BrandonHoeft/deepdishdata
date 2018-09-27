@@ -14,12 +14,22 @@ The dynamic right now is quite interesting. As of today, September 26, 2018, the
 
 ![](./images/standings_9_26_2018.png)
 
-The Cubbies have 5 games left to play and the Brewers have only 4. The team with the most wins will win the division. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the champion and that team avoids the cruel arbitrary nature of partaking in the single NL wild-card game. So, **What is the probability that the Chicago Cubs will still win the division?**
+The Cubbies have 5 games left to play and the Brewers have only 4. The team with the most wins will win the division. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers will steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers.
 
-To approach this problem, I will model the complex underlying nature of winning a baseball game with a very "small world model". That model entails using a mathematical function called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). Binomial distributions are commonly used in teaching probability of binary event outcomes, like "Heads" or "Tails" of a coin flip. In our use case, given **n** games left to play, and an underlying probability, **p**, of success (probability of winning a game), we can measure the likelihood of any number of Wins using these 2 parameters.
+To approach this problem, I built a simple data model based upon a mathematical function called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). Binomial distributions are useful in estimating the probability of binary event outcomes, like "Heads" or "Tails" of a coin flip. In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, we can measure the likelihood of any number of Wins using these 2 parameters for a given team.
+
+We'll build a data model for each the Cubs and the Brewers probability of winning **X** more games, using their respective winning percentages as parameter **p**, and their respective **n** number of games left.
 
 Analytical Approach
 -------------------
+
+To solve this analytically, we apply a little math magic . . .
+
+1.  Calculate the probability of winning **X** games with **n** left to play, given **p**, the team's winning percentage. We use a function called `dbinom()` in the statistical programming language, `R`, to do this easily.
+
+2.  Use matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make.
+
+3.  Sum all the joint probabilities where the Brewers won the same number of games or more than the Cubs. This is the final probability answer to our question.
 
 Simulation Approach
 -------------------
