@@ -13,6 +13,7 @@ options(scipen=999) # turn of scientific notation.
 library(dplyr)
 library(reshape2)
 library(ggplot2)
+library(knitr)
 ```
 
 It is the end of the 2018 regular season in MLB. The Chicago Cubs are on everybody's mind at my office, and of course it's hard for me to sympathize as a long-time Milwaukee Brewers fan living in Chicago. 
@@ -23,11 +24,11 @@ The dynamic right now is quite interesting. As of today, September 26, 2018, the
 knitr::include_graphics('./images/standings_9_26_2018.png')
 ```
 
-The Cubbies have 5 games left to play and the Brewers have only 4. The team with the most wins will win the division. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers  will steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers. 
+The Cubbies have 5 games left to play and the Brewers have only 4. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers  will steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers. 
 
-To approach this problem, I used a data model called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, this counting machine can measure the probability of any number of wins for a team using these 2 parameters/assumptions. 
+To approach this problem, I used a data model called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, this counting machine can measure the probability of any number of wins for a team using these 2 parameters. 
 
-We'll apply this data model for each the Cubs and the Brewers probability of winning **X** more games and make some inference from the outputs.
+We'll apply this data model for each the Cubs and the Brewers probability of winning **X** more games and make some inference from the outputs.  
 
 ## Analytical Approach
 
@@ -46,7 +47,7 @@ cubs_wins <- dbinom(c(0,1,2,3,4,5),
 ```
 
   
-2. Then apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. The plot below visualizes the joint probability distribution. 
+2. Apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. The plot below visualizes their joint probability distribution of all plausible win scenarios. 
 
 ``` {r}
 brewers_wins_x <- matrix(brewers_wins,
@@ -69,7 +70,7 @@ melt(joint_x) %>%
            midpoint = 0.065, limit = c(0,0.13), space = "Lab", 
            name="Joint\nProbability") +
         labs(title = "Joint Probability of Cubs and Brewers Remaining Wins",
-             subtitle = "marks indicate joint outcomes favorable to Milwaukee",
+             subtitle = "* indicates the outcomes favorable to Milwaukee tying or winning the Division",
              x= "Plausible # of Cubs Wins",
              y= "Plausible # of Brewers Wins") +
         theme_minimal()
@@ -93,29 +94,28 @@ data.frame(brewers_wins, cubs_wins) %>%
     ggplot(aes(x=simulated_wins, y=team)) + 
         ggridges::geom_density_ridges2(aes(fill=team), stat = "binline", binwidth = 0.5, scale =0.9) +
         labs(title = "10,000 Simulations of Cubs and Brewers Remaining Wins",
-             subtitle = "from a binomial distribution using each team's win %",
+             subtitle = "Using the binomial distribution as a model of the data",
          x= "Simulated Remaining Wins",
          y= NULL) +
         scale_x_continuous(limits=c(0,6), breaks = seq(0,6,1)) +
-        theme_minimal()
+        theme_minimal() +
+        scale_fill_manual(guide = FALSE, values = c("navy", "blue"))
 ```
 
-Given the outputs noted above, the Cubs have a better chance at getting 4 or 5 wins than the Brewers. But the modes are quite similar. Each the Cubs and Brewers are predicted to most likely get 2 to 3 wins. The probability that the Brewers will steal the division title from the Cubs 
+Given the simulated distribution of wins for each team above, the Cubs have a better chance at getting 4 or 5 wins than the Brewers. But the modes are quite similar. Each the Cubs and Brewers are predicted to most likely get between 2 to 3 wins, given their winning percentages **p** and their number of remaining games, **n**. The probability that the Brewers will steal the division title from the Cubs 
 can be estimated by comparing each of the 10,000 pairs of simulated wins between the teams, and measuring the proportion where the Brewers win as many or more simulations than the Cubs. In `R` code:
 
 ``` {r echo=TRUE}
 round(mean(brewers_wins >= cubs_wins), 2)
 ```
-We get the same estimated probability using simulation as we do using direct analytical methods.
+We get the same estimated probability using simulation as we do using direct analytical methods!
 
-## Let's check against someone much smarter than me
+## Let's check the results against other's projections
 
 Now, is this extremely simple model realistic? I'm making predictions simply based upon each team's current 2018 season win percentage and no other contexts!
 
-Let's get a reality check on whether this math checks out and gives us a reasonable ballpark estimate. We can look to Nate Silver's www.fivethirtyeight.com
+Let's get a reality check on whether this arbitrarily simple model gives us a reasonable estimate compared to a much more robustly built forecasting system. We can look to Nate Silver's www.fivethirtyeight.com
 and their [MLB standings projections](https://projects.fivethirtyeight.com/2018-mlb-predictions/?ex_cid=rrpromo) for comparison.
-
-
 
 ``` {r}
 knitr::include_graphics('./images/538_mlb_projections_9_26_2018.png')
@@ -127,3 +127,17 @@ It looks like their projections as of today are similar to my simple models abov
 
 If you're a Brewers fan, you'll take a 43-47% chance of winning the division this weekend, given how September started in the standings. If you're a Chicagoan, an approximate coin toss chance of keeping hold of the NL Central division entering this weekend is going to call for a large bottle of Tums. 
 
+Hope you enjoyed the first post. Please leave comments if you want. The full code for this blog post is available on [Github](https://github.com/BrandonHoeft/deepdishdata/tree/master/sept2018/cubs_division_odds).
+
+``` {r publish, include=FALSE, eval=FALSE}
+library(RWordPress)
+# Tell RWordPress how to set the user name, password, and URL for your WordPress site.
+pword <- Sys.getenv("wordpress_password")
+options(WordPressLogin = c(rwilldred27 = pword),
+        WordPressURL = 'https://deepdishdata.com/xmlrpc.php')
+
+# Tell knitr to create the html code and upload it to your WordPress site
+knit2wp("who_is_winning_the_nl_central.Rmd", 
+        title = 'September 2018 Post: Who is winning the NL Central this Weekend!?', 
+        publish = FALSE)
+```
