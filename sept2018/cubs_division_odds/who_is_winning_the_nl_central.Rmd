@@ -2,7 +2,7 @@
 title: "Who is winning the NL Central this Weekend!?"
 author: "Brandon Hoeft"
 date: "9/26/2018"
-output: md_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +11,7 @@ library(reshape2)
 library(ggplot2)
 library(knitr)
 opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = "",
-                      fig.height = 6, fig.width = 8)
+                      fig.height = 6, fig.width = 8, highlight=TRUE)
 options(scipen=999) # turn of scientific notation.
 
 ```
@@ -24,17 +24,15 @@ The dynamic right now is quite interesting. As of today, September 26, 2018, the
 knitr::include_graphics('./images/standings_9_26_2018.png')
 ```
 
-The Cubbies have 5 games left to play and the Brewers have only 4. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers  will steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers. 
+The Cubs have 5 games left to play and the Brewers have only 4. If the division standings end in a tie for first place, a 1 game playoff will be played to crown the division champion. So, **What is the probability that the Brewers will tie or steal the division title from the Cubs?** The answer to this question can be estimated by identifying how likely it is the Brewers win at least the same number of games as the Cubs. This is equivalent to the Cubs losing at least 1 more game remaining than the Brewers. 
 
-To approach this problem, I used a data model called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). In our use case, given **n** games left to play, and an underlying probability **p** of winning a game, this counting machine can measure the probability of any number of wins for a team using these 2 parameters. 
-
-We'll apply this data model for each the Cubs and the Brewers probability of winning **X** more games and make some inference from the outputs.  
+We can approach this problem with a data story. Given **n** games left to play, and an underlying probability **p** of winning a game, what is the probability of any number of wins for a team, when tweaking these 2 parameters. It turns out there's a model of data called the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution), a counting machine we can plug values into for the Cubs and Brewers, respectively. It will then spit out probabilities for each team of winning **X** more games!   
 
 ## Analytical Approach
 
 To solve this analytically, we apply a little math magic to count the ways in which each team's remaining season can play out in terms of wins. . . 
 
-1. I will use a function called `dbinom()` in the statistical programming language, `R`, to calculate the probability of winning **X** games with **n** left to play, given **p**, the team's winning percentage.
+1. A function called `dbinom()` in the statistical programming language, `R`, directly calculates the [probability mass function](https://en.wikipedia.org/wiki/Probability_mass_function) of winning **X** games with **n** left to play, given **p**, the team's winning percentage.
 
 ``` {r echo=TRUE}
 brewers_wins <- dbinom(c(0,1,2,3,4), # plausible outcomes for Brewers wins
@@ -47,7 +45,7 @@ cubs_wins <- dbinom(c(0,1,2,3,4,5),
 ```
 
   
-2. Apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. The plot below visualizes their joint probability distribution of all plausible win scenarios. 
+2. Apply matrix multiplication to calculate the [joint probability](http://www.statisticshowto.com/joint-probability-distribution/) of the Cubs and Brewers winning exactly **X** of their remaining games (ex. Brewers win 1 more and Cubs win 3 more). In probability theory, you multiply probability of different events/outcomes when they are assumed independent of each other. Since the Cubs and Brewers don't play any more games against each other, this is a fair assumption to make. 
 
 ``` {r}
 brewers_wins_x <- matrix(brewers_wins,
@@ -57,7 +55,17 @@ cubs_wins_x <- matrix(cubs_wins, ncol=length(cubs_wins),
                       dimnames = list("Cubs", paste0("CHC_", c(0:5), "_Win")))
  
 joint_x <- brewers_wins_x %*% cubs_wins_x
+```
 
+After wrangling some `R` code, we can inspect the joint probability distribution of any combination of possible Cubs and Brewers wins. Note that this is a probability distribution as the values in each cell sum to 1. 
+
+``` {r}
+apply(joint_x,2,rev)
+```
+
+The plot below visualizes the above for easier interpretation of all plausible win scenarios.  
+
+``` {r}
 melt(joint_x) %>%
     rename(brewers = Var1, cubs = Var2, joint_prob = value) %>%
     mutate(brewers = stringr::str_extract(brewers, "[[:digit:]]+"),
@@ -82,7 +90,7 @@ melt(joint_x) %>%
 
 ## Simulation Approach 
 
-Simulation is an alternative approach instead of a direct analytical method like above. Simulation is popular as outputs can be manipulated directly in an intuitive way to count joint event outcomes between each team. So instead of calculating the probability mass function for each team of winning **X** games with **n** left to play, given **p**, the team's winning percentage, let's simulate thousands of random draws from these respective probability distributions and compare the simulated outputs to arrive at an estimate of **What is the probability that the Brewers  will steal the division title from the Cubs?**
+Simulation is a popular alternative approach to statistical inference than what was done above (some calculus being applied under the hood with `dbinom()`), since the same probability can be estimated by just counting the ways in which many many simulated events occurred. We will simulate thousands of random draws from the Cubs' and Brewers' respective binomial distributions as previously described, where each team has parameters **n** games remaining and **p** probability of winning each game. We will then compare the simulated win totals between each team to arrive at an estimate of **What is the probability that the Brewers will steal the division title from the Cubs?**
 
 ```{r}
 set.seed(123)
@@ -125,19 +133,12 @@ It looks like their projections as of today are similar to my simple models abov
 
 ## Final Thoughts
 
-If you're a Brewers fan, you'll take a 43-47% chance of winning the division this weekend, given how September started in the standings. If you're a Chicagoan, an approximate coin toss chance of keeping hold of the NL Central division entering this weekend is going to call for a large bottle of Tums. 
+So, we went over a couple different ways to tell a data story about the chances of winning a fixed **n** number of games, given a **p** probability chance of success, using a [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution). We applied this data story to the remaining schedule of the Cubs and Brewers seasons, respectively, using techniques of traditional statistical inference and simulation. Both gave us the same answer that the Brewers have a 47% chance to tie or win the division title.
 
-Hope you enjoyed the first post. Please leave comments if you want. The full code for this blog post is available on [Github](https://github.com/BrandonHoeft/deepdishdata/tree/master/sept2018/cubs_division_odds).
+If you're a Brewers fan, given how September started in the standings, you will gladly find comfort in the odd's of what is close to a single coin toss for tying or winning the division this weekend. If you're a Chicagoan, unfortunately this weekend may call for a large bottle of Tums. 
 
-``` {r}
-# WORKS!!!
-library(markdown)
-#http://rstudio-pubs-static.s3.amazonaws.com/30704_583c8c8e2b254bf6a0791543d4a3438b.html
-# to convert markdown to clean HTML for copy paste into blog.
-markdownToHTML("who_is_winning_the_nl_central.md", "who_is_winning_the_nl_central.html",
-               fragment.only=TRUE)
+I hope you enjoyed the first post. Please leave comments below. This blog post was generated using `R` and `RMarkdown` code. The full code underlying the analysis and graphs are available on [Github](https://github.com/BrandonHoeft/deepdishdata/tree/master/sept2018/cubs_division_odds).
 
-```
 
 ``` {r setup2, include=FALSE, eval=FALSE}
 # GIVING ME ERRORS RIGHT NOW
