@@ -59,3 +59,21 @@ copy_df.info()
 # Filter tweets dataframe to original train delay tweets for specific trains
 train_delay_df = copy_df[copy_df['train_delay'] == True]
 not_delay_df = copy_df[copy_df['train_delay'] == False]
+
+
+# Group By the Train line and sort by timestamp
+train_delay_df.groupby(train_delay_df['train']).size()
+
+train_delay_df['time_to_delay'] = (train_delay_df.sort_values(by='created_at')
+    .groupby(train_delay_df['train'])['created_at']
+    .diff(periods=1))
+
+
+
+# Note that some lines have very few delay tweets! Inspect. Looks like there
+# are matching, relevant tweets in the train_delay_df. Yay!
+yellow_line = not_delay_df['text'].apply(lambda x: bool(re.search('yellow', x)))
+yellow_df = not_delay_df[yellow_line]
+
+purple_line = not_delay_df['text'].apply(lambda x: bool(re.search('purple', x)))
+purple_df = not_delay_df[purple_line]
